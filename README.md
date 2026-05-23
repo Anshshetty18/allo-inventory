@@ -3,7 +3,7 @@
 A production-grade inventory reservation platform for multi-warehouse retail. Built with Next.js 16, Prisma 6, Neon (Postgres), Upstash Redis, and shadcn/ui.
 
 **Live URL:** _(deploy to Vercel and paste here)_  
-**GitHub:** _(your repo URL)_
+**GitHub:** https://github.com/Anshshetty18/allo-inventory
 
 ---
 
