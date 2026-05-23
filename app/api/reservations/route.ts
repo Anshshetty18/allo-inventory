@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
       productName: reservation.product.name,
       productSku: reservation.product.sku,
       productPrice: reservation.product.price.toString(),
+      productImageUrl: reservation.product.imageUrl,
       warehouseId: reservation.warehouseId,
       warehouseName: reservation.warehouse.name,
       warehouseLocation: reservation.warehouse.location,

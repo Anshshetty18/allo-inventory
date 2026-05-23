@@ -42,7 +42,7 @@ async function main() {
   const products = await Promise.all([
     prisma.product.upsert({
       where: { sku: "SNK-AIR-001" },
-      update: {},
+      update: { imageUrl: "/products/sneakers.png" },
       create: {
         id: "10000000-0000-0000-0000-000000000001",
         name: "AirMax Pro Sneakers",
@@ -50,12 +50,12 @@ async function main() {
         description:
           "Lightweight performance sneakers with adaptive cushioning and breathable mesh upper. Perfect for daily training.",
         price: 4999.0,
-        imageUrl: null,
+        imageUrl: "/products/sneakers.png",
       },
     }),
     prisma.product.upsert({
       where: { sku: "WATCH-ELITE-002" },
-      update: {},
+      update: { imageUrl: "/products/smartwatch.png" },
       create: {
         id: "10000000-0000-0000-0000-000000000002",
         name: "EliteTime Smart Watch",
@@ -63,12 +63,12 @@ async function main() {
         description:
           "Premium stainless steel smartwatch with health monitoring, GPS, and 7-day battery life. Water-resistant to 50m.",
         price: 12999.0,
-        imageUrl: null,
+        imageUrl: "/products/smartwatch.png",
       },
     }),
     prisma.product.upsert({
       where: { sku: "BAG-TREK-003" },
-      update: {},
+      update: { imageUrl: "/products/backpack.png" },
       create: {
         id: "10000000-0000-0000-0000-000000000003",
         name: "TrekMate Backpack 45L",
@@ -76,12 +76,12 @@ async function main() {
         description:
           "Durable 45L hiking backpack with ergonomic support, rain cover included, and multiple organisational pockets.",
         price: 3499.0,
-        imageUrl: null,
+        imageUrl: "/products/backpack.png",
       },
     }),
     prisma.product.upsert({
       where: { sku: "HDPH-SOUND-004" },
-      update: {},
+      update: { imageUrl: "/products/headphones.png" },
       create: {
         id: "10000000-0000-0000-0000-000000000004",
         name: "SoundWave Pro Headphones",
@@ -89,12 +89,12 @@ async function main() {
         description:
           "Over-ear noise cancelling headphones with 40hr playtime, Hi-Res Audio certified, and foldable design.",
         price: 8499.0,
-        imageUrl: null,
+        imageUrl: "/products/headphones.png",
       },
     }),
     prisma.product.upsert({
       where: { sku: "CAM-LENS-005" },
-      update: {},
+      update: { imageUrl: "/products/camera.png" },
       create: {
         id: "10000000-0000-0000-0000-000000000005",
         name: "LensMax DSLR Camera",
@@ -102,7 +102,7 @@ async function main() {
         description:
           "24MP DSLR camera with dual image stabilisation, 4K video, and all-weather sealing. Body only.",
         price: 54999.0,
-        imageUrl: null,
+        imageUrl: "/products/camera.png",
       },
     }),
   ]);

@@ -110,23 +110,110 @@ This is ACID-correct, serialisable for this row, and requires no external coordi
 
 ---
 
-## Idempotency (Bonus)
+## Idempotency (Bonus — Implemented)
 
 Both `POST /api/reservations` and `POST /api/reservations/:id/confirm` support the `Idempotency-Key` header.
 
-### How it works
+### How to use it
 
-1. Client generates a UUID and sends it as `Idempotency-Key: <uuid>`
-2. Before executing the mutation, the server checks Redis for key `idempotency:{endpoint}:{uuid}`
-3. If found: returns the cached response (same status code + body) — **no side effect repeated**
-4. If not found: executes the mutation, stores `{ status, body }` in Redis with 24h TTL, returns fresh response
+```http
+POST /api/reservations
+Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
+Content-Type: application/json
+
+{ "productId": "...", "warehouseId": "...", "quantity": 1 }
+```
+
+If you repeat this request with the **same key**, the server returns the original `201` response and body — the reservation is **not** created again, and `reservedUnits` is **not** incremented twice.
+
+### Implementation
+
+All logic lives in [`lib/idempotency.ts`](./lib/idempotency.ts) and uses **Upstash Redis** as the store.
+
+**Redis key format:**
+```
+idempotency:{endpoint}:{client-key}
+```
+Example:
+```
+idempotency:POST /api/reservations:550e8400-e29b-41d4-a716-446655440000
+```
+
+Including the endpoint in the key means the same UUID is safe to reuse across different endpoints (a different operation won't collide).
+
+**Stored value:**
+```json
+{ "status": 201, "body": { "id": "...", "status": "pending", ... } }
+```
+
+**TTL:** 24 hours — long enough to cover any realistic payment retry window.
+
+**Flow for `POST /api/reservations`:**
+
+```
+Client                     Server                      Redis          Postgres
+  │                           │                           │               │
+  │── POST (key=K) ──────────►│                           │               │
+  │                           │── GET idempotency:...:K ─►│               │
+  │                           │◄─ null (not found) ───────│               │
+  │                           │                           │               │
+  │                           │── BEGIN ──────────────────────────────────►│
+  │                           │── SELECT … FOR UPDATE ────────────────────►│
+  │                           │── UPDATE reservedUnits ───────────────────►│
+  │                           │── INSERT reservation ─────────────────────►│
+  │                           │── COMMIT ──────────────────────────────────►│
+  │                           │                           │               │
+  │                           │── SET idempotency:...:K ─►│               │
+  │◄── 201 { id, status } ────│                           │               │
+  │                           │                           │               │
+  │   (network drop here)     │                           │               │
+  │                           │                           │               │
+  │── POST (key=K) RETRY ────►│                           │               │
+  │                           │── GET idempotency:...:K ─►│               │
+  │                           │◄─ { status:201, body } ───│               │
+  │◄── 201 { id, status } ────│   (NO DB write)           │               │
+```
+
+**Code path** (simplified):
+
+```ts
+// At the top of every mutating handler:
+const cached = await checkIdempotency(idempotencyKey, endpoint);
+if (cached) return cached;          // ← short-circuit, zero DB work
+
+// ... full business logic ...
+
+await storeIdempotency(idempotencyKey, endpoint, 201, responseBody);
+return NextResponse.json(responseBody, { status: 201 });
+```
 
 ### What this prevents
 
-- Payment SDK retrying a reservation after a network timeout → same reservation returned, no duplicate hold
-- Client retrying a confirm after a 5XX → same confirmed response, stock not decremented twice
+| Scenario | Without idempotency | With idempotency |
+|---|---|---|
+| Network timeout, client retries reserve | Duplicate reservation created, 2× stock held | Same reservation returned |
+| Payment webhook retries confirm | `totalUnits` decremented twice (phantom sale) | Same confirmed response from cache |
+| Same key, different endpoint | N/A | Safe — key is namespaced by endpoint |
 
-The frontend generates a new idempotency key per attempt, not per session, so intentional retries (different UUIDs) work correctly.
+### What it does NOT do
+
+- **No mutex during in-flight requests.** If two requests with the same key arrive simultaneously (before either has stored its result), both may execute. This is acceptable — true simultaneous retries are rare, and the `SELECT FOR UPDATE` prevents double-reservation anyway. A full implementation would use a Redis `SET NX` lock before executing.
+- **No key validation.** The header value is not parsed as a UUID; any string works.
+
+### Live test results
+
+Verified by [`scripts/test-idempotency.ts`](./scripts/test-idempotency.ts):
+
+```
+TEST 1: POST /api/reservations — idempotency
+  [1] First call   → HTTP 201  id=ab23e514…  reservedUnits=1
+  [2] Second call  → HTTP 201  id=ab23e514…  reservedUnits=1  (unchanged ✅)
+  [3] Third call (different key) → HTTP 201  id=0ce1708a…  (new reservation ✅)
+
+TEST 2: POST /api/reservations/:id/confirm — idempotency
+  [1] First confirm  → HTTP 200  totalUnits: 80 → 79
+  [2] Second confirm → HTTP 200  totalUnits: 79 → 79  (no double-deduct ✅)
+```
 
 ---
 

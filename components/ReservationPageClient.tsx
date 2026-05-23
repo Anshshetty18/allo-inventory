@@ -53,6 +53,11 @@ export function ReservationPageClient({ id }: ReservationPageClientProps) {
   const [actionLoading, setActionLoading] = useState<"confirm" | "cancel" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
+  const [errorBanner, setErrorBanner] = useState<{
+    code: "409" | "410";
+    title: string;
+    detail: string;
+  } | null>(null);
 
   const fetchReservation = useCallback(async () => {
     try {
@@ -96,17 +101,28 @@ export function ReservationPageClient({ id }: ReservationPageClientProps) {
       const data = await res.json();
 
       if (res.status === 410) {
-        toast.error("Reservation expired 😓", {
-          description: data.error,
-          duration: 6000,
+        const msg = data.error ?? "Reservation has expired.";
+        // Prominent inline banner
+        setErrorBanner({
+          code: "410",
+          title: "Reservation Expired",
+          detail: msg + " Your reserved stock has been returned to the warehouse.",
         });
+        // Toast too
+        toast.error("Reservation expired 😣", { description: msg, duration: 6000 });
         setExpired(true);
         setReservation((prev) => prev ? { ...prev, status: "released" } : prev);
         return;
       }
 
       if (res.status === 409) {
-        toast.error("Cannot confirm", { description: data.error });
+        const msg = data.error ?? "Cannot confirm this reservation.";
+        setErrorBanner({
+          code: "409",
+          title: "Cannot Confirm",
+          detail: msg,
+        });
+        toast.error("Cannot confirm", { description: msg });
         return;
       }
 
@@ -267,6 +283,54 @@ export function ReservationPageClient({ id }: ReservationPageClientProps) {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Left column: timer + actions */}
           <div className="lg:col-span-2 space-y-6">
+
+            {/* ── 409 / 410 Error Banner ── */}
+            {errorBanner && (
+              <div
+                role="alert"
+                className="rounded-2xl p-5 border animate-in fade-in slide-in-from-top-3 duration-400"
+                style={{
+                  background: errorBanner.code === "410"
+                    ? "linear-gradient(135deg, oklch(0.22 0.08 15 / 0.8), oklch(0.18 0.05 20 / 0.8))"
+                    : "linear-gradient(135deg, oklch(0.22 0.08 30 / 0.8), oklch(0.18 0.05 35 / 0.8))",
+                  borderColor: errorBanner.code === "410"
+                    ? "oklch(0.55 0.22 15 / 0.6)"
+                    : "oklch(0.55 0.18 30 / 0.6)",
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Icon: different per error code */}
+                  {errorBanner.code === "410" ? (
+                    <svg className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: "oklch(0.72 0.22 15)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: "oklch(0.72 0.18 30)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                  )}
+                  <div className="flex-1">
+                    <p className="font-bold text-base" style={{ color: errorBanner.code === "410" ? "oklch(0.82 0.18 15)" : "oklch(0.82 0.15 30)" }}>
+                      {errorBanner.code === "410" ? "HTTP 410 — " : "HTTP 409 — "}{errorBanner.title}
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed" style={{ color: "oklch(0.65 0.08 15)" }}>
+                      {errorBanner.detail}
+                    </p>
+                  </div>
+                  <button
+                    aria-label="Dismiss"
+                    className="opacity-50 hover:opacity-100 transition-opacity flex-shrink-0"
+                    onClick={() => setErrorBanner(null)}
+                    style={{ color: "oklch(0.72 0.22 15)" }}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Countdown */}
             {isPending && (
               <div className="glass rounded-2xl p-6 flex flex-col items-center fade-up">
@@ -388,21 +452,29 @@ export function ReservationPageClient({ id }: ReservationPageClientProps) {
               </h2>
               <div className="flex items-start gap-4">
                 <div
-                  className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
+                  className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
                   style={{
                     background:
                       "linear-gradient(135deg, oklch(0.35 0.12 270), oklch(0.25 0.08 290))",
                   }}
                 >
-                  <svg
-                    className="w-8 h-8 text-white/70"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
+                  {reservation.productImageUrl ? (
+                    <img
+                      src={reservation.productImageUrl}
+                      alt={reservation.productName}
+                      className="w-full h-full object-contain p-1"
+                    />
+                  ) : (
+                    <svg
+                      className="w-8 h-8 text-white/70"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg">{reservation.productName}</h3>

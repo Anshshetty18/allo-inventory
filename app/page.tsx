@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { ProductCard } from "@/components/ProductCard";
 import { ReserveModal } from "@/components/ReserveModal";
+import { AlloSymbol } from "@/components/AlloSymbol";
 import type { ProductWithStock } from "@/schemas";
 
 function ProductListingSkeleton() {
@@ -86,19 +87,7 @@ export default function HomePage() {
                 background: "linear-gradient(135deg, oklch(0.65 0.22 270), oklch(0.6 0.2 290))",
               }}
             >
-              <svg
-                className="w-4 h-4 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
+              <AlloSymbol className="w-5 h-5 text-white" />
             </div>
             <span className="font-semibold text-lg gradient-text tracking-tight">
               Allo Inventory

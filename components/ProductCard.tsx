@@ -128,22 +128,32 @@ export function ProductCard({ product, onReserve }: ProductCardProps) {
           </div>
         )}
 
-        {/* Product icon */}
-        <div className="relative z-10 text-white/90">
-          <svg
-            className="w-16 h-16 opacity-60"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-            />
-          </svg>
-        </div>
+        {/* Product image or icon fallback */}
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="relative z-10 h-36 w-auto max-w-[75%] object-contain drop-shadow-2xl
+                       transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <div className="relative z-10 text-white/90">
+            <svg
+              className="w-16 h-16 opacity-60"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+              />
+            </svg>
+          </div>
+        )}
       </div>
 
       <CardHeader className="pb-2 pt-4">

@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 /**
  * Vercel Cron Job: runs every 5 minutes.
  * Sweeps expired pending reservations and releases held units back to inventory.
- * vercel.json: "schedule": "*/5 * * * *"
+ * vercel.json schedule: every-5-minutes ("star-slash-5 star star star star")
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");

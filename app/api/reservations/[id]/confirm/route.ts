@@ -130,6 +130,7 @@ export async function POST(
       productName: full.product.name,
       productSku: full.product.sku,
       productPrice: full.product.price.toString(),
+      productImageUrl: full.product.imageUrl,
       warehouseId: full.warehouseId,
       warehouseName: full.warehouse.name,
       warehouseLocation: full.warehouse.location,
