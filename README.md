@@ -74,17 +74,17 @@ Expiry is handled **lazily on read**: whenever a reservation is fetched (GET `/a
 
 1. **Lazy cleanup on read** (immediate, zero infrastructure) — same as development. Any API call touching a specific reservation handles its own expiry. This ensures a user who sits on the checkout page and then confirms gets an immediate 410 if time ran out.
 
-2. **Vercel Cron job** (background sweeper) — `vercel.json` schedules `GET /api/cron/expire-reservations` every 5 minutes. This releases abandoned reservations that nobody reads, ensuring stock returns to available even for ghost sessions.
+2. **Vercel Cron job** (background sweeper) — `vercel.json` schedules `GET /api/cron/expire-reservations` once per day at midnight UTC (Vercel Hobby plan limit). This catches any abandoned reservations that were never read.
 
 ```json
 {
-  "crons": [{ "path": "/api/cron/expire-reservations", "schedule": "*/5 * * * *" }]
+  "crons": [{ "path": "/api/cron/expire-reservations", "schedule": "0 0 * * *" }]
 }
 ```
 
 The cron endpoint is protected by a `Bearer <CRON_SECRET>` check in production (Vercel automatically sends this via the `Authorization` header).
 
-**Why both?** The cron alone has a 5-minute lag — lazy cleanup removes that lag for active users. The cron alone handles users who close the tab without cancelling.
+**Why both?** The cron alone has up to a 24-hour lag on Hobby — lazy cleanup removes that lag for active users. The cron handles ghost sessions (user closed tab without cancelling).
 
 ---
 
